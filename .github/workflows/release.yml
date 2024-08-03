@@ -1,15 +1,13 @@
 name: Build
 
 on:
-  workflow_run:
-    workflows: [Lint]
-    types:
-      - completed
+  push:
+    branches:
+      - release-test
 
 jobs:
   dagger-build-satellite:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,7 +47,6 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
 
   dagger-build-ground-control:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
