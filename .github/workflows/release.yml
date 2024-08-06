@@ -27,3 +27,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
           GITHUB_SHA: ${{ github.sha }}
+
+  build-ground-control:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Call Dagger Function to build and publish on Github
+        uses: dagger/dagger-for-github@v5
+        with:
+          version: latest
+          verb: call
+          module: https://github.com/Mehul-Kumar-27/harbor-satellite/dagger-test
+          args: start --name=ground-control --source=./ground-control --release=./ci --GITHUB-TOKEN=$GITHUB_TOKEN --version=$GITHUB_SHA --REPO_OWNER=$GITHUB_USERNAME --REPO_NAME=harbor-satellite --RELEASE_NAME=ground-control
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_SHA: ${{ github.sha }}
