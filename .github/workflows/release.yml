@@ -20,7 +20,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar/harbor-satellite
+          module: https://github.com/Mehul-Kumar-27/harbor-satellite/dagger-test
           args: start --name=satellite --source=. --release=./ci --GITHUB-TOKEN=env:GITHUB_TOKEN --version=$GITHUB_SHA --REPO_OWNER=$GITHUB_USERNAME --REPO_NAME=harbor-satellite --RELEASE_NAME=satellite
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
         env:
