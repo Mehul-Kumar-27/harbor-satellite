@@ -54,8 +54,11 @@ If you encounter any issues during this process, consult the [Dagger Quickstart 
 To view available functions, run:
 - ```sh
     dagger functions
+To run a particular function, run:
+- ```sh
+    dagger call <function_name> --args
 - #### Example: Building Satellite Binaries
     To build the satellite binaries, use the following command:
     - ```sh
-        dagger build --source=. --name=satellite
-This vold spin up a container and install required dependencies and build various architecture binaries
+        dagger call build --source=. --name=satellite
+This would spin up a container and install required dependencies and build various architecture binaries
