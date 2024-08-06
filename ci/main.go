@@ -78,7 +78,6 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 		WithEnvVariable("RELEASE_NAME", RELEASE_NAME).
 		WithEnvVariable("OUT_DIR", OUT_DIR).
 		WithExec([]string{"chmod", "+x", "release.sh"}).
-		WithExec([]string{"ls", "-lR", "."}).
 		WithExec([]string{"bash", "-c", "./release.sh"})
 	output, err := releaseContainer.Stdout(ctx)
 	if err != nil {
