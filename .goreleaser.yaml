@@ -34,7 +34,7 @@ builds:
 
 
 release:
-  name_template: "{{ .Env.APP_NAME }}_{{ .ShortCommit }}"
+  name_template: "{{ .Env.APP_NAME }}_{{ .Tag }}"
 
 archives:
   - format: tar.gz
