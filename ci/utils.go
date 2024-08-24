@@ -91,14 +91,10 @@ func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.D
 }
 
 // PrepareForRelease prepares the repository for a release by creating a new tag. The default release type is "patch".
-func (m *HarborSatellite) prepareForRelease(ctx context.Context, git_container *dagger.Container, source *dagger.Directory, name string,
+func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *dagger.Container, source *dagger.Directory, name string,
 	// +optional
 	// +default="patch"
 	release_type string) (string, error) {
-
-	git_container.
-		WithMountedDirectory(PROJ_MOUNT, source).
-		WithWorkdir(PROJ_MOUNT)
 	/// This would get the last tag that was created. Empty string if no tag was created.
 	getTagsOutput, err := git_container.
 		WithExec([]string{
@@ -121,25 +117,18 @@ func (m *HarborSatellite) prepareForRelease(ctx context.Context, git_container *
 		return "", err
 	}
 
-	// push this new tag to the repository
-	git_tag_push_output, err := git_container.
-		WithExec([]string{"git", "tag", new_tag}).
-		Stdout(ctx)
-
-	if err != nil {
-		slog.Error("Failed to create new tag: ", err.Error(), ".")
-		slog.Error("Tag Output:", git_tag_push_output, ".")
-		return git_tag_push_output, err
-	}
-	slog.Info("Created New Tag Output:", git_tag_push_output, ".")
-	return "", nil
+	return new_tag, nil
 }
 
 
 func generateNewTag(latestTag, suffix, release_type string) (string, error) {
 	// Remove the suffix from the latest tag to get the version
+	fmt.Println("Latest tag: ", latestTag)
+	fmt.Println("Suffix: ", suffix)
+	fmt.Println("Release type: ", release_type)
 	versionWithoutSuffix := strings.TrimSuffix(latestTag, fmt.Sprintf("-%s", suffix))
 	versionWithoutSuffix = strings.TrimPrefix(versionWithoutSuffix, "v")
+	fmt.Println("Version without suffix: ", versionWithoutSuffix)
 	parts := strings.Split(versionWithoutSuffix, ".")
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {

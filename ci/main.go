@@ -31,15 +31,17 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 	release_type string) (string, error) {
 
 	container := dag.Container().
-		From("alpine/git")
+		From("alpine/git").
+		WithMountedDirectory(PROJ_MOUNT, directory).
+		WithWorkdir(PROJ_MOUNT)
 	// Prepare the tags for the release
-	tag_release_output, err := m.prepareForRelease(ctx, container, directory, name, release_type)
+	release_tag, err := m.get_release_tag(ctx, container, directory, name, release_type)
 	if err != nil {
 		slog.Error("Failed to prepare for release: ", err, ".")
-		slog.Error("Tag Release Output:", tag_release_output, ".")
-		return tag_release_output, err
+		slog.Error("Tag Release Output:", release_tag, ".")
+		return release_tag, err
 	}
-	slog.Info("Tag Release Output:", tag_release_output, ".")
+	slog.Info("Tag Release Output:", release_tag, ".")
 	pathToMain, err := m.getPathToReleaser(name)
 	if err != nil {
 		return "", err
@@ -51,6 +53,7 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 		WithEnvVariable("GITHUB_TOKEN", token).
 		WithEnvVariable("PATH_TO_MAIN", pathToMain).
 		WithEnvVariable("APP_NAME", name).
+		WithExec([]string{"git", "tag", release_tag}).
 		WithExec([]string{"goreleaser", "release", "-f", pathToMain, "--clean"}).
 		Stderr(ctx)
 
