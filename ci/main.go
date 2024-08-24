@@ -32,6 +32,7 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 
 	container := dag.Container().
 		From("alpine/git").
+		WithEnvVariable("GITHUB_TOKEN", token).
 		WithMountedDirectory(PROJ_MOUNT, directory).
 		WithWorkdir(PROJ_MOUNT)
 	// Prepare the tags for the release
