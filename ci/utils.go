@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strconv"
+	"strings"
 
 	"container-registry.com/harbor-satellite/ci/internal/dagger"
 )
@@ -52,4 +55,128 @@ func (m *HarborSatellite) Service(
 			InsecureRootCapabilities: true,
 		}).
 		AsService()
+}
+
+func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.Directory {
+	fmt.Printf("Building %s\n", name)
+	gooses := []string{"linux", "darwin"}
+	goarches := []string{"amd64", "arm64"}
+	binaryName := name // base name for the binary
+
+	// create empty directory to put build artifacts
+	outputs := dag.Directory()
+
+	golang := dag.Container().
+		From(DEFAULT_GO).
+		WithDirectory(PROJ_MOUNT, source).
+		WithWorkdir(PROJ_MOUNT)
+	for _, goos := range gooses {
+		for _, goarch := range goarches {
+			// create the full binary name with OS and architecture
+			outputBinary := fmt.Sprintf("%s/%s-%s-%s", name, binaryName, goos, goarch)
+
+			// build artifact with specified binary name
+			build := golang.
+				WithEnvVariable("GOOS", goos).
+				WithEnvVariable("GOARCH", goarch).
+				WithExec([]string{"go", "build", "-o", outputBinary})
+
+			// add build to outputs
+			outputs = outputs.WithDirectory(name, build.Directory(name))
+		}
+	}
+
+	// return build directory
+	return outputs
+}
+
+// PrepareForRelease prepares the repository for a release by creating a new tag. The default release type is "patch".
+func (m *HarborSatellite) prepareForRelease(ctx context.Context, git_container *dagger.Container, source *dagger.Directory, name string,
+	// +optional
+	// +default="patch"
+	release_type string) (string, error) {
+
+	git_container.
+		WithMountedDirectory(PROJ_MOUNT, source).
+		WithWorkdir(PROJ_MOUNT)
+	/// This would get the last tag that was created. Empty string if no tag was created.
+	getTagsOutput, err := git_container.
+		WithExec([]string{
+			"/bin/sh", "-c",
+			fmt.Sprintf(`git tag --list "v*%s" | sort -V | tail -n 1`, name),
+		}).
+		Stdout(ctx)
+
+	if err != nil {
+		slog.Error("Failed to get tags: ", err, ".")
+		slog.Error("Get Tags Output:", getTagsOutput, ".")
+		return getTagsOutput, err
+	}
+
+	slog.Info("Get Tags Output:", getTagsOutput, ".")
+	latest_tag := strings.TrimSpace(getTagsOutput)
+	new_tag, err := generateNewTag(latest_tag, name, release_type)
+	if err != nil {
+		slog.Error("Failed to generate new tag: ", err.Error(), ".")
+		return "", err
+	}
+
+	// push this new tag to the repository
+	git_tag_push_output, err := git_container.
+		WithExec([]string{"git", "tag", new_tag}).
+		Stdout(ctx)
+
+	if err != nil {
+		slog.Error("Failed to create new tag: ", err.Error(), ".")
+		slog.Error("Tag Output:", git_tag_push_output, ".")
+		return git_tag_push_output, err
+	}
+	slog.Info("Created New Tag Output:", git_tag_push_output, ".")
+	return "", nil
+}
+
+
+func generateNewTag(latestTag, suffix, release_type string) (string, error) {
+	// Remove the suffix from the latest tag to get the version
+	versionWithoutSuffix := strings.TrimSuffix(latestTag, fmt.Sprintf("-%s", suffix))
+	versionWithoutSuffix = strings.TrimPrefix(versionWithoutSuffix, "v")
+	parts := strings.Split(versionWithoutSuffix, ".")
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		slog.Error("Failed to convert major version to integer: ", err.Error(), ".")
+		return "", err
+	}
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		slog.Error("Failed to convert minor version to integer: ", err.Error(), ".")
+		return "", err
+	}
+	patch, err := strconv.Atoi(parts[2])
+	if err != nil {
+		slog.Error("Failed to convert patch version to integer: ", err.Error(), ".")
+		return "", err
+	}
+	// Increment the version according to the release type
+	switch release_type {
+	case "major":
+		major++
+	case "minor":
+		minor++
+	case "patch":
+		patch++
+	}
+	newVersion := fmt.Sprintf("v%d.%d.%d-%s", major, minor, patch, suffix)
+
+	return newVersion, nil
+}
+
+func (m *HarborSatellite) getPathToReleaser(name string) (string, error) {
+	switch name {
+	case "satellite":
+		return ".goreleaser.yaml", nil
+	case "ground-control":
+		return "ground-control/.goreleaser.yaml", nil
+	default:
+		return "", fmt.Errorf("unknown name: %s", name)
+	}
 }
