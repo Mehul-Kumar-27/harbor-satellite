@@ -34,7 +34,7 @@ builds:
 
 
 release:
-  name_template: "{{ .Env.APP_NAME }}_{{ .Tag }}"
+  name_template: "{{ .Tag }}"
 
 archives:
   - format: tar.gz
