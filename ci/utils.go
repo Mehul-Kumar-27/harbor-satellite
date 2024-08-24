@@ -97,7 +97,6 @@ func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *da
 	release_type string) (string, error) {
 	/// This would get the last tag that was created. Empty string if no tag was created.
 	getTagsOutput, err := git_container.
-		WithExec([]string{"git", "fetch", "--tags"}).
 		WithExec([]string{
 			"/bin/sh", "-c",
 			fmt.Sprintf(`git tag --list "v*%s" | sort -V | tail -n 1`, name),

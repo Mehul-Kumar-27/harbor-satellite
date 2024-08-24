@@ -34,7 +34,9 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 		From("alpine/git").
 		WithEnvVariable("GITHUB_TOKEN", token).
 		WithMountedDirectory(PROJ_MOUNT, directory).
-		WithWorkdir(PROJ_MOUNT)
+		WithWorkdir(PROJ_MOUNT).
+		WithExec([]string{"git", "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:"}).
+		WithExec([]string{"git", "fetch", "--tags"})
 	// Prepare the tags for the release
 	release_tag, err := m.get_release_tag(ctx, container, directory, name, release_type)
 	if err != nil {
@@ -65,4 +67,17 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 	}
 
 	return release_output, nil
+}
+
+func (m *HarborSatellite) Fetch(ctx context.Context, token string) (string, error) {
+	return dag.Container().
+		From("alpine:latest").
+		WithEnvVariable("GITHUB_API_TOKEN", token).
+		WithExec([]string{"apk", "add", "--no-cache", "curl"}).
+		WithExec([]string{"sh", "-c", `
+            curl -s "https://api.github.com/repos/Mehul-Kumar-27/harbor-satellite/tags" \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $GITHUB_API_TOKEN"
+        `}).
+		Stdout(ctx)
 }
