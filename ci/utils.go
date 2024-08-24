@@ -10,6 +10,7 @@ import (
 	"container-registry.com/harbor-satellite/ci/internal/dagger"
 )
 
+// Attach would attach a docker as a service to the container provided.
 func (m *HarborSatellite) Attach(ctx context.Context, container *dagger.Container, dockerVersion string) (*dagger.Container, error) {
 	dockerd := m.Service(dockerVersion)
 
@@ -57,6 +58,7 @@ func (m *HarborSatellite) Service(
 		AsService()
 }
 
+/// Would build the project with the source provided. The name should be the name of the project.
 func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.Directory {
 	fmt.Printf("Building %s\n", name)
 	gooses := []string{"linux", "darwin"}
@@ -122,10 +124,10 @@ func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *da
 
 
 func generateNewTag(latestTag, suffix, release_type string) (string, error) {
-	// Remove the suffix from the latest tag to get the version
-	fmt.Println("Latest tag: ", latestTag)
-	fmt.Println("Suffix: ", suffix)
-	fmt.Println("Release type: ", release_type)
+	if latestTag == "" {
+        // If the latest tag is empty, this is the first release
+        return fmt.Sprintf("v0.0.1-%s", suffix), nil
+    }
 	versionWithoutSuffix := strings.TrimSuffix(latestTag, fmt.Sprintf("-%s", suffix))
 	versionWithoutSuffix = strings.TrimPrefix(versionWithoutSuffix, "v")
 	fmt.Println("Version without suffix: ", versionWithoutSuffix)
