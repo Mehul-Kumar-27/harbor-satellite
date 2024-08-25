@@ -61,23 +61,10 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 		Stderr(ctx)
 
 	if err != nil {
-		slog.Error("Failed to release Ground Control: ", err, ".")
+		slog.Error("Failed to release: ", err, ".")
 		slog.Error("Release Output:", release_output, ".")
 		return release_output, err
 	}
 
 	return release_output, nil
-}
-
-func (m *HarborSatellite) Fetch(ctx context.Context, token string) (string, error) {
-	return dag.Container().
-		From("alpine:latest").
-		WithEnvVariable("GITHUB_API_TOKEN", token).
-		WithExec([]string{"apk", "add", "--no-cache", "curl"}).
-		WithExec([]string{"sh", "-c", `
-            curl -s "https://api.github.com/repos/Mehul-Kumar-27/harbor-satellite/tags" \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer $GITHUB_API_TOKEN"
-        `}).
-		Stdout(ctx)
 }
