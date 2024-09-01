@@ -62,3 +62,4 @@ To run a particular function, run:
     - ```sh
         dagger call build --source=. --name=satellite
 This would spin up a container and install required dependencies and build various architecture binaries
+saldfj
