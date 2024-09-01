@@ -36,7 +36,6 @@ jobs:
           GITHUB_USERNAME: ${{ github.repository_owner }}
           GITHUB_SHA: ${{ github.sha }}
           # Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
-          ## Test changes
           # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
   build-ground-control:
@@ -53,7 +52,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite/tree/dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
           args: build --source=./ground-control --name=ground-control
 
       - name: Release on Github
@@ -61,7 +60,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite/tree/dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
           args: release --directory=. --name=ground-control --token=$GITHUB_TOKEN
 
         env:
