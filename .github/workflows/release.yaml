@@ -35,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
           GITHUB_SHA: ${{ github.sha }}
-          # Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
+          # Uncomment the below line if you wish to see the traces of the workflow on dagger c
           # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
   build-ground-control:
