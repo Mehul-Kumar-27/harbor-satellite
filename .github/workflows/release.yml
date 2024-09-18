@@ -5,7 +5,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - dagger-ci-test
+      - main
 
 jobs:
 
