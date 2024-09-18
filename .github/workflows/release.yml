@@ -1,0 +1,107 @@
+# release.yml satellite
+
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - dagger-ci-test
+
+jobs:
+
+  run-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Setup Go
+          uses: actions/setup-go@v4
+          with:
+            go-version: '>=1.22'
+
+        - name: Install Curl
+          run: sudo apt-get install curl
+
+        - name: Install Docker
+          run: |
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+
+        - name: Install Dagger CLI
+          run: |
+            cd /usr/local
+            curl -L https://dl.dagger.io/dagger/install.sh | sudo sh
+            cd -
+
+        - name: Run Test Cases
+          run: dagger run go test ./... -v -count=1
+
+  dagger-build-satellite:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build the binary for the satellite
+        uses: dagger/dagger-for-github@v5
+        with:
+          version: latest
+          verb: call
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          args: build --source=. --name=satellite
+
+      - name: Release on Github
+        uses: dagger/dagger-for-github@v5
+        with:
+          version: latest
+          verb: call
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          args: release --directory=. --name=satellite --token=$GITHUB_TOKEN
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_SHA: ${{ github.sha }}
+          # Uncomment the below line if you wish to see the traces of the workflow on dagger c
+          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+
+  build-ground-control:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build the binary for ground control
+        uses: dagger/dagger-for-github@v5
+        with:
+          version: latest
+          verb: call
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          args: build --source=./ground-control --name=ground-control
+
+      - name: Release on Github
+        uses: dagger/dagger-for-github@v5
+        with:
+          version: latest
+          verb: call
+          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          args: release --directory=. --name=ground-control --token=$GITHUB_TOKEN
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_SHA: ${{ github.sha }}
+          # Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
+          # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
