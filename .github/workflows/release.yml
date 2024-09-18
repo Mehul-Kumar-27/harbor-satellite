@@ -37,6 +37,9 @@ jobs:
             curl -L https://dl.dagger.io/dagger/install.sh | sudo sh
             cd -
 
+        - name: Generated the dagger go code
+          run: dagger develop
+          
         - name: Run Test Cases
           run: dagger run go test ./... -v -count=1
 
