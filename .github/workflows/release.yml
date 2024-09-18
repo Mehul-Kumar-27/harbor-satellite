@@ -39,7 +39,7 @@ jobs:
 
         - name: Generated the dagger go code
           run: dagger develop
-          
+
         - name: Run Test Cases
           run: dagger run go test ./... -v -count=1
 
@@ -58,7 +58,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: build --source=. --name=satellite
 
       - name: Release on Github
@@ -66,7 +66,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: release --directory=. --name=satellite --token=$GITHUB_TOKEN
 
         env:
@@ -91,7 +91,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: build --source=./ground-control --name=ground-control
 
       - name: Release on Github
@@ -99,7 +99,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/Mehul-Kumar-27/harbor-satellite#dagger-ci-test
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: release --directory=. --name=ground-control --token=$GITHUB_TOKEN
 
         env:
