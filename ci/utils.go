@@ -64,7 +64,7 @@ func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.D
 
 	gooses := []string{"linux", "darwin"}
 	goarches := []string{"amd64", "arm64"}
-	binaryName := component // base component for the binary
+	binaryName := name// base component for the binary
 
 	// create empty directory to put build artifacts
 	outputs := dag.Directory()
@@ -76,7 +76,7 @@ func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.D
 	for _, goos := range gooses {
 		for _, goarch := range goarches {
 			// create the full binary component with OS and architecture
-			outputBinary := fmt.Sprintf("%s/%s-%s-%s", component, binaryName, goos, goarch)
+			outputBinary := fmt.Sprintf("%s/%s-%s-%s", name, binaryName, goos, goarch)
 
 			// build artifact with specified binary component
 			build := golang.
@@ -89,7 +89,7 @@ func (m *HarborSatellite) build(source *dagger.Directory, name string) *dagger.D
 				WithExec([]string{"go", "build", "-o", outputBinary})
 
 			// add build to outputs
-			outputs = outputs.WithDirectory(component, build.Directory(component))
+			outputs = outputs.WithDirectory(name, build.Directory(name))
 		}
 	}
 

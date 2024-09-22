@@ -1,13 +1,14 @@
-name: Build
+# release.yml satellite
+
+name: Build and Release
 
 on:
-  workflow_run:
-    workflows: [Lint]
-    types:
-      - completed
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
+
   run-tests:
     runs-on: ubuntu-latest
     permissions:
@@ -57,7 +58,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: build --source=. --component=satellite
 
       - name: Release on Github
@@ -65,16 +66,14 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
-          args: release --source=. --name=satellite --token=$GITHUB_TOKEN
+          module: github.com/Mehul-Kumar-27/harbor-satellite
+          args: release --directory=. --name=satellite --token=$GITHUB_TOKEN
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
           GITHUB_SHA: ${{ github.sha }}
-          ### Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
-          ### register to dagger cloud and get the token
-          #### https://dagger.cloud/
+          # Uncomment the below line if you wish to see the traces of the workflow on dagger c
           # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
 
   build-ground-control:
@@ -92,7 +91,7 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
+          module: github.com/Mehul-Kumar-27/harbor-satellite
           args: build --source=./ground-control --component=ground-control
 
       - name: Release on Github
@@ -100,14 +99,12 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
-          args: release --source=. --name=ground-control --token=$GITHUB_TOKEN
+          module: github.com/Mehul-Kumar-27/harbor-satellite
+          args: release --directory=. --name=ground-control --token=$GITHUB_TOKEN
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
           GITHUB_SHA: ${{ github.sha }}
-          ### Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
-          ### register to dagger cloud and get the token
-          #### https://dagger.cloud/
+          # Uncomment the below line if you wish to see the traces of the workflow on dagger cloud
           # cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
