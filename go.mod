@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/pelletier/go-toml v1.9.5
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
@@ -22,7 +23,6 @@ require (
 
 require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	k8s.io/cri-api v0.27.1 // indirect
 )
@@ -320,7 +320,7 @@ require (
 	github.com/owenrumney/go-sarif/v2 v2.3.1 // indirect
 	github.com/owenrumney/squealer v1.2.2 // indirect
 	github.com/package-url/packageurl-go v0.1.3 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.3
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
