@@ -1,4 +1,4 @@
-# Harbor Satellite — Sofware Distribution to the Edge
+# Harbor Satellite — Software Distribution to the Edge
 
 Harbor Satellite aims to bring Harbor container registries to edge locations, ensuring consistent, available, and integrity-checked images for edge computing environments. The developed sofware of a stateful, standalone satellite registry that can function as a primary registry for edge locations and act as a fallback option if the central Harbor registry is unavailable.
 
@@ -13,6 +13,9 @@ Harbor Satellite is an extension to the existing Harbor container registry that 
 Harbor Satellite will synchronize with the central Harbor registry, when Internet connectivity permits it, allowing it to receive and store images. This will ensure that even in environments with limited or unreliable internet connectivity, containerized applications can still fetch their required images from the local Harbor Satellite.
 
 Harbor Satellite will also include a toolset enabling the monitoring and management of local decentralized registries.
+
+## QuickStart
+Please refer to the latest setup instructions in QUICKSTART.md file for detailed steps on setting up Harbor Satellite locally.
 
 ## Non-Goals
 
@@ -51,29 +54,29 @@ Harbor Satellite, at its most basic, will run in a single container and will be 
 
 Harbor Satellite may be implemented following 1 or several of 3 different architectures depending on its use cases :
 
-1. **Replicating from a remote registry to a local registry.**  
+1. **Replicating from a remote registry to a local registry.**
 In this basic use case, the stateless satellite component will handle pulling images from a remote registry and then pushing them to the local OCI compliant registry. This local registry will then be accessible to other local edge devices who can pull required images directly from it.
-_(A direct access from edge device to the remote registry is still possible when network conditions permit it)._  
-The satellite component may also handle updating container runtime configurations and fetching image lists from Ground Control, a part of Harbor.  
-The stateful local regsitry will also need to handle storing and managing data on local volumes.  
-A typical use case would work as follows :  
+_(A direct access from edge device to the remote registry is still possible when network conditions permit it)._
+The satellite component may also handle updating container runtime configurations and fetching image lists from Ground Control, a part of Harbor.
+The stateful local regsitry will also need to handle storing and managing data on local volumes.
+A typical use case would work as follows :
 _In an edge computing environment where IoT devices are deployed to a location with limited or no internet connnectivity, these devices need to run containerised images but cannot pull from a central Harbor registry. A local Harbor Satellite instance can be deployed and take up this role while Internet connectivity is unreliable and distribute all required images. Once a reliable connection is re-established, the Harbor Satellite instance will be able to pull required images from its central Harbor registry and thus store up to date images locally._
 
 ![Use Case #1](docs/images/satellite_use_case_1.svg)
 <p align="center"><em>Use case #1</em></p>
 
-2. **Replicating from a remote regsitry to a local Spegel Registry**  
-The stateless satellite component send pull instructions to Spegel instances running with each node of a Kubernetes cluster. The node will then directly pull images from a remote registry and share it with other local nodes, removing the need for each of them to individually pull an image from a remote registry.  
-The network interfaces (boundaries) represented in this use case should and will be the same as those represented in use case #1  
-A typical use case would work as follows :  
+2. **Replicating from a remote regsitry to a local Spegel Registry**
+The stateless satellite component send pull instructions to Spegel instances running with each node of a Kubernetes cluster. The node will then directly pull images from a remote registry and share it with other local nodes, removing the need for each of them to individually pull an image from a remote registry.
+The network interfaces (boundaries) represented in this use case should and will be the same as those represented in use case #1
+A typical use case would work as follows :
 _In a larger scale edge computing environment with a significant amount of IoT devices needing to run containerised applications, a single local registry in might not be able to handle the increased amount of demands from edge devices. The solution is to deploy several registries to several nodes who are able to automatically replicate images across each other thanks to Spegel instances running together with each node. The Satellite component will use the same interface to instruct each node when, where and how to pull new images that need to be replicated across the cluster._
 
 ![Use Case #2](docs/images/satellite_use_case_2.svg)
 <p align="center"><em>Use case #2</em></p>
 
-3. **Proxying from a remote regsitry over the local registry**  
-The stateless satellite component will be in charge of configuring the local OCI compliant registry, which will be running in proxy mode only. This local registry will then handle pulling necessary images from the remote registry and serving them up for use by local edge devices.  
-A typical use case would work as follows :  
+3. **Proxying from a remote regsitry over the local registry**
+The stateless satellite component will be in charge of configuring the local OCI compliant registry, which will be running in proxy mode only. This local registry will then handle pulling necessary images from the remote registry and serving them up for use by local edge devices.
+A typical use case would work as follows :
 _When, for a number of possible different reasons, the remote registry side of the diagram would not be able to produce a list of images to push down to the Harbor Satellite, the Satellite would then act as a proxy and forward all requests from edge devices to the remote registry. This ensures the availability of necessary images without the need for a pre-compiled list of images_
 
 ![Use Case #3](docs/images/satellite_use_case_3.svg)
@@ -96,4 +99,4 @@ The project is currently in active development. If you are interested in partici
 
 You can reach the Harbor community and developers via the following channels:
 
-- [#harbor-satellite on CNCF Slack](https://cloud-native.slack.com/archives/C06NE6EJBU1)
+- [#harbor-satellite on CNCF Slack](https://cloud-native.slack.com/archives/C06NE6EJBU1) (Request an invite to join the CNCF Slack via [slack.cncf.io](https://slack.cncf.io/))

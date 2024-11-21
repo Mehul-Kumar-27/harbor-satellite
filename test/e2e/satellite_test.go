@@ -1,7 +1,8 @@
-package main
+package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,12 +11,6 @@ import (
 
 	"dagger.io/dagger"
 	"github.com/stretchr/testify/assert"
-)
-
-const (
-	appDir     = "/app"
-	appBinary  = "app"
-	sourceFile = "main.go"
 )
 
 func TestSatellite(t *testing.T) {
@@ -49,14 +44,10 @@ func setupSourceRegistry(
 	client *dagger.Client,
 	ctx context.Context,
 ) (*dagger.Service, error) {
-	// socket to connect to host Docker
-	socket := client.Host().UnixSocket("/var/run/docker.sock")
 
 	container, err := client.Container().
 		From("registry:2").
 		WithExposedPort(5000).
-		WithUnixSocket("/var/run/docker.sock", socket).
-		WithEnvVariable("DOCKER_HOST", "unix:///var/run/docker.sock").
 		WithEnvVariable("CACHEBUSTER", time.Now().String()).
 		AsService().Start(ctx)
 
@@ -71,14 +62,10 @@ func setupDestinationRegistry(
 	client *dagger.Client,
 	ctx context.Context,
 ) (*dagger.Service, error) {
-	// socket to connect to host Docker
-	socket := client.Host().UnixSocket("/var/run/docker.sock")
 
 	container, err := client.Container().
 		From("registry:2").
 		WithExposedPort(5000).
-		WithUnixSocket("/var/run/docker.sock", socket).
-		WithEnvVariable("DOCKER_HOST", "unix:///var/run/docker.sock").
 		WithEnvVariable("CACHEBUSTER", time.Now().String()).
 		AsService().Start(ctx)
 
@@ -94,26 +81,18 @@ func pushImageToSourceRegistry(
 	client *dagger.Client,
 	source *dagger.Service,
 ) {
-	// socket to connect to host Docker
-	socket := client.Host().UnixSocket("/var/run/docker.sock")
 
 	container := client.Container().
 		From("docker:dind").
-		WithUnixSocket("/var/run/docker.sock", socket).
-		WithEnvVariable("DOCKER_HOST", "unix:///var/run/docker.sock").
 		WithEnvVariable("CACHEBUSTER", time.Now().String()).
 		WithServiceBinding("source", source)
 
 	// add crane & push images
 	container = container.WithExec([]string{"apk", "add", "crane"}).
-		WithExec([]string{"docker", "pull", "busybox:1.36"}).
-		WithExec([]string{"docker", "pull", "busybox:stable"}).
 		WithExec([]string{"crane", "copy", "busybox:1.36", "source:5000/library/busybox:1.36", "--insecure"}).
-		WithExec([]string{"crane", "copy", "busybox:stable", "source:5000/library/busybox:stable", "--insecure"}).
-		WithExec([]string{"crane", "digest", "source:5000/library/busybox:1.36", "--insecure"}).
-		WithExec([]string{"crane", "digest", "source:5000/library/busybox:stable", "--insecure"})
+		WithExec([]string{"crane", "digest", "source:5000/library/busybox:1.36", "--insecure"})
 
-		// check pushed images exist
+	// check pushed images exist
 	container = container.WithExec([]string{"crane", "catalog", "source:5000", "--insecure"})
 
 	stdOut, err := container.Stdout(ctx)
@@ -122,7 +101,6 @@ func pushImageToSourceRegistry(
 	fmt.Println(stdOut)
 }
 
-// buildSatellite and test test the connection
 func buildSatellite(
 	t *testing.T,
 	client *dagger.Client,
@@ -130,8 +108,12 @@ func buildSatellite(
 	source *dagger.Service,
 	dest *dagger.Service,
 ) {
-	socket := client.Host().UnixSocket("/var/run/docker.sock")
-
+	var PATH_TO_CONFIG string
+	if ABS {
+		PATH_TO_CONFIG = absolute_path
+	} else {
+		PATH_TO_CONFIG = relative_path
+	}
 	// Get the directory
 	parentDir, err := getProjectDir()
 	assert.NoError(t, err, "Failed to get Project Directory")
@@ -140,32 +122,38 @@ func buildSatellite(
 	dir := client.Host().Directory(parentDir)
 
 	// Get configuration file on the host
-	configFile := client.Host().File("./testdata/config.toml")
+	configFile := client.Host().File(PATH_TO_CONFIG)
 
 	// Configure and build the Satellite
 	container := client.Container().From("golang:alpine").WithDirectory(appDir, dir).
 		WithWorkdir(appDir).
 		WithServiceBinding("source", source).
 		WithServiceBinding("dest", dest).
-		WithUnixSocket("/var/run/docker.sock", socket).
-		WithEnvVariable("DOCKER_HOST", "unix:///var/run/docker.sock").
 		WithEnvVariable("CACHEBUSTER", time.Now().String()).
 		WithExec([]string{"cat", "config.toml"}).
 		WithFile("./config.toml", configFile).
 		WithExec([]string{"cat", "config.toml"}).
-		WithExec([]string{"apk", "add", "crane"}).
-		WithExec([]string{"crane", "-v", "catalog", "source:5000", "--insecure"}).
-		WithExec([]string{"crane", "digest", "source:5000/library/busybox:stable", "--insecure"}).
 		WithExec([]string{"go", "build", "-o", appBinary, sourceFile}).
 		WithExposedPort(9090).
-		WithExec([]string{"go", "run", "./test/e2e/test.go"})
+		WithExec([]string{"./" + appBinary}).
+		AsService()
 
-	assert.NoError(t, err, "Test failed in buildSatellite")
+	satellite_container := client.Container().
+		From("golang:alpine").
+		WithServiceBinding("satellite", container).
+		WithExec([]string{"wget", "-O", "-", "http://satellite:9090" + satellite_ping_endpoint})
 
-	stdOut, err := container.Stdout(ctx)
-	assert.NoError(t, err, "Failed to get stdOut in Satellite")
+	output, err := satellite_container.Stdout(ctx)
+	assert.NoError(t, err, "Failed to get output from satellite ping endpoint")
+	// Check the response
+	var response map[string]interface{}
+	err = json.Unmarshal([]byte(output), &response)
+	assert.NoError(t, err, "Failed to parse JSON response")
 
-	fmt.Println(stdOut)
+	// Assert the response
+	assert.Equal(t, true, response["success"], "Unexpected success value")
+	assert.Equal(t, "Ping satellite successful", response["message"], "Unexpected message")
+	assert.Equal(t, float64(200), response["status_code"], "Unexpected status code")
 }
 
 // Gets the directory of the project

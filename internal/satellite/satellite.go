@@ -2,69 +2,69 @@ package satellite
 
 import (
 	"context"
-	"fmt"
-	"time"
 
-	"container-registry.com/harbor-satellite/internal/replicate"
-	"container-registry.com/harbor-satellite/internal/store"
+	"container-registry.com/harbor-satellite/internal/config"
+	"container-registry.com/harbor-satellite/internal/notifier"
+	"container-registry.com/harbor-satellite/internal/scheduler"
+	"container-registry.com/harbor-satellite/internal/state"
+	"container-registry.com/harbor-satellite/internal/utils"
+	"container-registry.com/harbor-satellite/logger"
 )
 
 type Satellite struct {
-	storer     store.Storer
-	replicator replicate.Replicator
+	stateReader  state.StateReader
+	schedulerKey scheduler.SchedulerKey
 }
 
-func NewSatellite(storer store.Storer, replicator replicate.Replicator) *Satellite {
+func NewSatellite(ctx context.Context, schedulerKey scheduler.SchedulerKey) *Satellite {
 	return &Satellite{
-		storer:     storer,
-		replicator: replicator,
+		schedulerKey: schedulerKey,
 	}
 }
 
 func (s *Satellite) Run(ctx context.Context) error {
-	// Execute the initial operation immediately without waiting for the ticker
-	imgs, err := s.storer.List(ctx)
+	log := logger.FromContext(ctx)
+	log.Info().Msg("Starting Satellite")
+	replicateStateJobCron, err := config.GetJobSchedule(config.ReplicateStateJobName)
 	if err != nil {
+		log.Warn().Msgf("Error in fetching job schedule: %v", err)
 		return err
 	}
-	if len(imgs) == 0 {
-		fmt.Println("No images to replicate")
-	} else {
-		for _, img := range imgs {
-			err = s.replicator.Replicate(ctx, img.Name)
-			if err != nil {
-				return err
-			}
-		}
-		s.replicator.DeleteExtraImages(ctx, imgs)
+	updateConfigJobCron, err := config.GetJobSchedule(config.UpdateConfigJobName)
+	if err != nil {
+		log.Warn().Msgf("Error in fetching job schedule: %v", err)
+		return err
 	}
-	fmt.Print("--------------------------------\n")
-
-	// Temporarily set to faster tick rate for testing purposes
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticker.C:
-			imgs, err := s.storer.List(ctx)
-			if err != nil {
-				return err
-			}
-			if len(imgs) == 0 {
-				fmt.Println("No images to replicate")
-			} else {
-				for _, img := range imgs {
-					err = s.replicator.Replicate(ctx, img.Name)
-					if err != nil {
-						return err
-					}
-				}
-				s.replicator.DeleteExtraImages(ctx, imgs)
-			}
-		}
-		fmt.Print("--------------------------------\n")
+	userName := config.GetHarborUsername()
+	password := config.GetHarborPassword()
+	zotURL := config.GetZotURL()
+	sourceRegistry := utils.FormatRegistryURL(config.GetRemoteRegistryURL())
+	useUnsecure := config.UseUnsecure()
+	// Get the scheduler from the context
+	scheduler := ctx.Value(s.schedulerKey).(scheduler.Scheduler)
+	// Create a simple notifier and add it to the process
+	notifier := notifier.NewSimpleNotifier(ctx)
+	// Creating a process to fetch and replicate the state
+	states := config.GetStates()
+	fetchAndReplicateStateProcess := state.NewFetchAndReplicateStateProcess(replicateStateJobCron, notifier, userName, password, zotURL, sourceRegistry, useUnsecure, states)
+	configFetchProcess := state.NewFetchConfigFromGroundControlProcess(updateConfigJobCron, "", "")
+	err = scheduler.Schedule(configFetchProcess)
+	if err != nil {
+		log.Error().Err(err).Msg("Error scheduling process")
+		return err
 	}
+	// Add the process to the scheduler
+	err = scheduler.Schedule(fetchAndReplicateStateProcess)
+	if err != nil {
+		log.Error().Err(err).Msg("Error scheduling process")
+		return err
+	}
+	// Schedule Register Satellite Process
+	ztrProcess := state.NewZtrProcess(state.DefaultZeroTouchRegistrationCronExpr)
+	err = scheduler.Schedule(ztrProcess)
+	if err != nil {
+		log.Error().Err(err).Msg("Error scheduling process")
+		return err
+	}
+	return nil
 }

@@ -1,0 +1,27 @@
+{
+  "state_config": {
+    "auth": {}
+  },
+  "environment_variables": {
+    "bring_own_registry": false,
+    "ground_control_url": "https://gc.bupd.xyz",
+    "log_level": "info",
+    "own_registry_addr": "",
+    "own_registry_port": "8585",
+    "use_unsecure": true,
+    "zot_config_path": "./registry/config.json",
+    "token": "187916a603c135d681ef0553752994f3",
+    "jobs": [
+      {
+        "name": "replicate_state",
+        "cron_expression": "@every 00h00m30s"
+      },
+      {
+        "name": "update_config",
+        "cron_expression": "@every 00h00m10s"
+      }
+    ]
+  },
+  "zot_url": "",
+  "config_path": "config.json"
+}
