@@ -12,8 +12,6 @@ import (
 
 const FetchConfigFromGroundControlProcessName string = "fetch-config-from-ground-control-process"
 
-const DefaultFetchConfigFromGroundControlTimePeriod string = "00h00m030s"
-
 const FetchConfigFromGroundControlEventName string = "fetch-config-from-ground-control-event"
 
 const GroundControlSyncPath string = "/satellites/sync"
@@ -87,7 +85,7 @@ func (f *FetchConfigFromGroundControlProcess) GetName() string {
 }
 
 func (f *FetchConfigFromGroundControlProcess) GetCronExpr() string {
-	return fmt.Sprintf("@every %s", f.cronExpr)
+	return f.cronExpr
 }
 
 func (f *FetchConfigFromGroundControlProcess) IsRunning() bool {

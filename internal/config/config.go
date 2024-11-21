@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 )
 
@@ -10,6 +11,8 @@ var appConfig *Config
 const DefaultConfigPath string = "config.json"
 const ReplicateStateJobName string = "replicate_state"
 const UpdateConfigJobName string = "update_config"
+const DefaultStateReplicationCron string = "@every 00h00m30s"
+const DefaultConfigUpdateCron string = "@every 00h00m10s"
 
 type Auth struct {
 	Name     string `json:"name,omitempty"`
@@ -19,17 +22,15 @@ type Auth struct {
 
 // LocalJsonConfig is a struct that holds the configs that are passed as environment variables
 type LocalJsonConfig struct {
-	BringOwnRegistry  bool   `json:"bring_own_registry"`
-	GroundControlURL  string `json:"ground_control_url"`
-	LogLevel          string `json:"log_level"`
-	OwnRegistryAddr   string `json:"own_registry_addr"`
-	OwnRegistryPort   string `json:"own_registry_port"`
-	UseUnsecure       bool   `json:"use_unsecure"`
-	ZotConfigPath     string `json:"zot_config_path"`
-	Token             string `json:"token"`
-	StateFetchPeriod  string `json:"state_fetch_period"`
-	ConfigFetchPeriod string `json:"config_fetch_period"`
-	Jobs              []Job  `json:"jobs"`
+	BringOwnRegistry bool   `json:"bring_own_registry"`
+	GroundControlURL string `json:"ground_control_url"`
+	LogLevel         string `json:"log_level"`
+	OwnRegistryAddr  string `json:"own_registry_addr"`
+	OwnRegistryPort  string `json:"own_registry_port"`
+	UseUnsecure      bool   `json:"use_unsecure"`
+	ZotConfigPath    string `json:"zot_config_path"`
+	Token            string `json:"token"`
+	Jobs             []Job  `json:"jobs"`
 }
 
 type StateConfig struct {
@@ -41,20 +42,16 @@ type Config struct {
 	StateConfig     StateConfig     `json:"state_config"`
 	LocalJsonConfig LocalJsonConfig `json:"environment_variables"`
 	ZotUrl          string          `json:"zot_url"`
+	ConfigPath      string          `json:"config_path"`
 }
 
 type Job struct {
-	Name       string `json:"name"`
-	Seconds    string `json:"seconds"`
-	Minutes    string `json:"minutes"`
-	Hours      string `json:"hours"`
-	DayOfMonth string `json:"day_of_month"`
-	Month      string `json:"month"`
-	DayOfWeek  string `json:"day_of_week"`
+	Name           string `json:"name"`
+	CronExpression string `json:"cron_expression"`
 }
 
 func GetLogLevel() string {
-	if appConfig.LocalJsonConfig.LogLevel == "" {
+	if appConfig == nil || appConfig.LocalJsonConfig.LogLevel == "" {
 		return "info"
 	}
 	return appConfig.LocalJsonConfig.LogLevel
@@ -108,12 +105,13 @@ func GetRemoteRegistryURL() string {
 	return appConfig.StateConfig.Auth.Registry
 }
 
-func GetStateFetchPeriod() string {
-	return appConfig.LocalJsonConfig.StateFetchPeriod
-}
-
-func GetConfigFetchPeriod() string {
-	return appConfig.LocalJsonConfig.ConfigFetchPeriod
+func GetJobSchedule(jobName string) (string, error) {
+	for _, job := range appConfig.LocalJsonConfig.Jobs {
+		if job.Name == jobName {
+			return job.CronExpression, nil
+		}
+	}
+	return "", fmt.Errorf("job not found: %s", jobName)
 }
 
 func GetStates() []string {
@@ -130,6 +128,13 @@ func GetGroundControlURL() string {
 
 func SetGroundControlURL(url string) {
 	appConfig.LocalJsonConfig.GroundControlURL = url
+}
+
+func SetDefaultConfigPath(path string) {
+	appConfig.ConfigPath = path
+}
+func GetDefaultConfigPath() string {
+	return appConfig.ConfigPath
 }
 
 func ParseConfigFromJson(jsonData string) (*Config, error) {
@@ -173,7 +178,10 @@ func LoadConfig(configPath string) (*Config, []error, []string) {
 	}
 	// Validate the job schedule fields
 	for i := range config.LocalJsonConfig.Jobs {
-		warnings = append(warnings, ValidateJobSchedule(&config.LocalJsonConfig.Jobs[i])...)
+		warning := ValidateCronExpression(&config.LocalJsonConfig.Jobs[i])
+		if warning != "" {
+			warnings = append(warnings, warning)
+		}
 	}
 	return config, checks, warnings
 }
@@ -182,6 +190,8 @@ func InitConfig(configPath string) ([]error, []string) {
 	var err []error
 	var warnings []string
 	appConfig, err, warnings = LoadConfig(configPath)
+	SetDefaultConfigPath(configPath)
+	WriteConfigToPath(configPath)
 	return err, warnings
 }
 
@@ -190,4 +200,17 @@ func UpdateStateConfig(name, registry, secret string, states []string) {
 	appConfig.StateConfig.Auth.Registry = registry
 	appConfig.StateConfig.Auth.Secret = secret
 	appConfig.StateConfig.States = states
+	WriteConfigToPath(appConfig.ConfigPath)
+}
+
+func WriteConfigToPath(configPath string) error {
+	configData, err := json.MarshalIndent(appConfig, "", "  ")
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(configPath, configData, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }

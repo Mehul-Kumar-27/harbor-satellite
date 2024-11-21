@@ -57,7 +57,11 @@ func NewContainerdCommand() *cobra.Command {
 		Use:   "containerd",
 		Short: "Creates the config file for the containerd runtime to fetch the images from the local repository",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return SetupContainerRuntimeCommand(cmd, &defaultZotConfig, DefaultContainerDGenPath)
+			defaultConfigPath, err := cmd.Root().Flags().GetString("config")
+			if err != nil {
+				return fmt.Errorf("error reading the config flag: %w", err)
+			}
+			return SetupContainerRuntimeCommand(cmd, &defaultZotConfig, DefaultContainerDGenPath, defaultConfigPath)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logger.FromContext(cmd.Context())
@@ -79,7 +83,7 @@ func NewContainerdCommand() *cobra.Command {
 
 	containerdCmd.Flags().BoolVarP(&generateConfig, "gen", "g", false, "Generate the containerd config file")
 	containerdCmd.PersistentFlags().StringVarP(&containerdConfigPath, "path", "p", DefaultContainerdConfigPath, "Path to the containerd config file of the container runtime")
-	containerdCmd.PersistentFlags().StringVarP(&containerDCertPath, "cert-path", "c", ContainerDCertPath, "Path to the containerd cert directory")
+	containerdCmd.PersistentFlags().StringVarP(&containerDCertPath, "cert-path", "e", ContainerDCertPath, "Path to the containerd cert directory")
 	containerdCmd.AddCommand(NewReadConfigCommand(ContainerdRuntime))
 	return containerdCmd
 }

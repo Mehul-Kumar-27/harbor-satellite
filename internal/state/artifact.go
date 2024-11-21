@@ -1,9 +1,5 @@
 package state
 
-import (
-	"reflect"
-)
-
 // ArtifactReader defines an interface for reading artifact data
 type ArtifactReader interface {
 	GetRepository() string
@@ -11,7 +7,6 @@ type ArtifactReader interface {
 	GetDigest() string
 	GetType() string
 	IsDeleted() bool
-	HasChanged(newArtifact ArtifactReader) bool
 	SetRepository(repository string)
 	SetName(name string)
 	GetName() string
@@ -65,41 +60,6 @@ func (a *Artifact) IsDeleted() bool {
 
 func (a *Artifact) GetName() string {
 	return a.Name
-}
-
-// HasChanged compares the current artifact with another to determine if there are any changes
-func (a *Artifact) HasChanged(newArtifact ArtifactReader) bool {
-	// Compare the digest (hash)
-	if a.GetDigest() != newArtifact.GetDigest() {
-		return true
-	}
-
-	// Compare the repository
-	if a.GetRepository() != newArtifact.GetRepository() {
-		return true
-	}
-
-	// Compare the tags (order-agnostic comparison)
-	if !reflect.DeepEqual(a.GetTags(), newArtifact.GetTags()) {
-		return true
-	}
-
-	// Compare the deletion status
-	if a.IsDeleted() != newArtifact.IsDeleted() {
-		return true
-	}
-
-	if a.GetType() != newArtifact.GetType() {
-		return true
-	}
-
-	// Compare the tags (order-agnostic comparison using reflect.DeepEqual)
-	if !reflect.DeepEqual(a.GetTags(), newArtifact.GetTags()) {
-		return true
-	}
-
-	// No changes detected
-	return false
 }
 
 func (a *Artifact) SetRepository(repository string) {

@@ -88,7 +88,7 @@ func (s *BasicScheduler) Schedule(process Process) error {
 		}
 	})
 	if err != nil {
-		return fmt.Errorf("error adding process to scheduler: %w", err)
+		return fmt.Errorf("error adding process %s to scheduler: %w", process.GetName(), err)
 	}
 	s.processes[process.GetName()] = process
 	log.Info().Msgf("Process %s scheduled with cron expression %s", process.GetName(), process.GetCronExpr())

@@ -17,11 +17,12 @@ import (
 )
 
 func NewRootCommand() *cobra.Command {
+	var defaultConfigPath string
 	rootCmd := &cobra.Command{
 		Use:   "harbor-satellite",
 		Short: "Harbor Satellite is a tool to replicate images from source registry to Harbor registry",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			errors, warnings := config.InitConfig(config.DefaultConfigPath)
+			errors, warnings := config.InitConfig(defaultConfigPath)
 			if len(errors) > 0 || len(warnings) > 0 {
 				ctx := cmd.Context()
 				ctx, cancel := utils.SetupContext(ctx)
@@ -31,7 +32,7 @@ func NewRootCommand() *cobra.Command {
 					log.Warn().Msg(warn)
 				}
 				for _, err := range errors {
-					log.Error().Err(err).Msg("Error initializing config")
+					log.Error().Msgf("%v", err)
 				}
 				if len(errors) > 0 {
 					cancel()
@@ -46,6 +47,7 @@ func NewRootCommand() *cobra.Command {
 			return run(ctx, cancel)
 		},
 	}
+	rootCmd.PersistentFlags().StringVarP(&defaultConfigPath, "config", "c", config.DefaultConfigPath, "Path to the satellite config file")
 	rootCmd.AddCommand(runtime.NewContainerdCommand())
 	rootCmd.AddCommand(runtime.NewCrioCommand())
 	return rootCmd

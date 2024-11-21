@@ -25,19 +25,15 @@ func NewSatellite(ctx context.Context, schedulerKey scheduler.SchedulerKey) *Sat
 func (s *Satellite) Run(ctx context.Context) error {
 	log := logger.FromContext(ctx)
 	log.Info().Msg("Starting Satellite")
-	var fetchStateProcessCron string
-	state_fetch_period := config.GetStateFetchPeriod()
-	fetchConfigProcessCron, err := utils.FormatDuration(config.GetConfigFetchPeriod())
+	replicateStateJobCron, err := config.GetJobSchedule(config.ReplicateStateJobName)
 	if err != nil {
-		log.Warn().Msgf("Error formatting duration in seconds: %v", err)
-		log.Warn().Msgf("Using default duration: %v", state.DefaultFetchConfigFromGroundControlTimePeriod)
-		fetchConfigProcessCron = state.DefaultFetchConfigFromGroundControlTimePeriod
+		log.Warn().Msgf("Error in fetching job schedule: %v", err)
+		return err
 	}
-	fetchStateProcessCron, err = utils.FormatDuration(state_fetch_period)
+	updateConfigJobCron, err := config.GetJobSchedule(config.UpdateConfigJobName)
 	if err != nil {
-		log.Warn().Msgf("Error formatting duration in seconds: %v", err)
-		log.Warn().Msgf("Using default duration: %v", state.DefaultFetchAndReplicateStateTimePeriod)
-		fetchStateProcessCron = state.DefaultFetchAndReplicateStateTimePeriod
+		log.Warn().Msgf("Error in fetching job schedule: %v", err)
+		return err
 	}
 	userName := config.GetHarborUsername()
 	password := config.GetHarborPassword()
@@ -50,8 +46,8 @@ func (s *Satellite) Run(ctx context.Context) error {
 	notifier := notifier.NewSimpleNotifier(ctx)
 	// Creating a process to fetch and replicate the state
 	states := config.GetStates()
-	fetchAndReplicateStateProcess := state.NewFetchAndReplicateStateProcess(fetchStateProcessCron, notifier, userName, password, zotURL, sourceRegistry, useUnsecure, states)
-	configFetchProcess := state.NewFetchConfigFromGroundControlProcess(fetchConfigProcessCron, "", "")
+	fetchAndReplicateStateProcess := state.NewFetchAndReplicateStateProcess(replicateStateJobCron, notifier, userName, password, zotURL, sourceRegistry, useUnsecure, states)
+	configFetchProcess := state.NewFetchConfigFromGroundControlProcess(updateConfigJobCron, "", "")
 	err = scheduler.Schedule(configFetchProcess)
 	if err != nil {
 		log.Error().Err(err).Msg("Error scheduling process")

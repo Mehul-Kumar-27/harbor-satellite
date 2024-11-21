@@ -45,7 +45,11 @@ func NewCrioCommand() *cobra.Command {
 		Use:   "crio",
 		Short: "Creates the config file for the crio runtime to fetch the images from the local repository",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return SetupContainerRuntimeCommand(cmd, &defaultZotConfig, DefaultCrioGenPath)
+			defaultConfigPath, err := cmd.Root().Flags().GetString("config")
+			if err != nil {
+				return fmt.Errorf("error reading the config flag: %w", err)
+			}
+			return SetupContainerRuntimeCommand(cmd, &defaultZotConfig, DefaultCrioGenPath, defaultConfigPath)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logger.FromContext(cmd.Context())
@@ -63,7 +67,7 @@ func NewCrioCommand() *cobra.Command {
 		},
 	}
 	crioCmd.Flags().BoolVarP(&generateConfig, "gen", "g", false, "Generate the config file")
-	crioCmd.PersistentFlags().StringVarP(&crioConfigPath, "config", "c", DefaultCrioRegistryConfigPath, "Path to the crio registry config file")
+	crioCmd.PersistentFlags().StringVarP(&crioConfigPath, "path", "p", DefaultCrioRegistryConfigPath, "Path to the crio registry config file")
 	return crioCmd
 }
 
@@ -141,9 +145,9 @@ func GenerateCrioRegistryConfig(defaultZotConfig *registry.DefaultZotConfig, cri
 	return nil
 }
 
-func SetupContainerRuntimeCommand(cmd *cobra.Command, defaultZotConfig **registry.DefaultZotConfig, defaultGenPath string) error {
+func SetupContainerRuntimeCommand(cmd *cobra.Command, defaultZotConfig **registry.DefaultZotConfig, defaultGenPath string, defaultConfigPath string) error {
 	var err error
-	checks, warnings := config.InitConfig(config.DefaultConfigPath)
+	checks, warnings := config.InitConfig(defaultConfigPath)
 	if len(checks) > 0 || len(warnings) > 0 {
 		log := logger.FromContext(cmd.Context())
 		for _, warn := range warnings {

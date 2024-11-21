@@ -18,8 +18,6 @@ import (
 
 const FetchAndReplicateStateProcessName string = "fetch-replicate-state-process"
 
-const DefaultFetchAndReplicateStateTimePeriod string = "00h00m010s"
-
 type FetchAndReplicateAuthConfig struct {
 	Username          string
 	Password          string
@@ -179,7 +177,7 @@ func (f *FetchAndReplicateStateProcess) GetName() string {
 }
 
 func (f *FetchAndReplicateStateProcess) GetCronExpr() string {
-	return fmt.Sprintf("@every %s", f.cronExpr)
+	return f.cronExpr
 }
 
 func (f *FetchAndReplicateStateProcess) IsRunning() bool {

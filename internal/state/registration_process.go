@@ -16,7 +16,7 @@ import (
 
 const ZeroTouchRegistrationRoute = "satellites/ztr"
 const ZeroTouchRegistrationProcessName = "zero-touch-registration-process"
-const DefaultZeroTouchRegistrationCronExpr string = "00h00m05s"
+const DefaultZeroTouchRegistrationCronExpr string = "@every 00h00m05s"
 const ZeroTouchRegistrationEventName = "zero-touch-registration-event"
 
 type ZtrProcess struct {
@@ -106,7 +106,7 @@ func (z *ZtrProcess) GetName() string {
 }
 
 func (z *ZtrProcess) GetCronExpr() string {
-	return fmt.Sprintf("@every %s", z.cronExpr)
+	return z.cronExpr
 }
 
 func (z *ZtrProcess) IsRunning() bool {
@@ -143,7 +143,7 @@ func (z *ZtrProcess) CanExecute(ctx context.Context) (bool, string) {
 		}
 	}
 	if len(missing) > 0 {
-		return false, fmt.Sprintf("missing %s, please update config present at %s", strings.Join(missing, ", "), config.DefaultConfigPath)
+		return false, fmt.Sprintf("missing %s, please update config present at %s", strings.Join(missing, ", "), config.GetDefaultConfigPath())
 	}
 
 	return true, fmt.Sprintf("Process %s can execute all conditions fulfilled", z.Name)
@@ -172,7 +172,7 @@ func (z *ZtrProcess) stop() {
 // loadConfig loads the configuration.
 // It returns an error if the configuration cannot be loaded.
 func (z *ZtrProcess) loadConfig() ([]error, []string) {
-	return config.InitConfig(config.DefaultConfigPath)
+	return config.InitConfig(config.GetDefaultConfigPath())
 }
 
 func RegisterSatellite(groundControlURL, path, token string, ctx context.Context) (error, config.StateConfig) {
