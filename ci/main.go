@@ -16,7 +16,7 @@ const (
 	GO_VERSION          = "1.22"
 	PROJ_MOUNT          = "/app"
 	DOCKER_PORT         = 2375
-	GORELEASER_VERSION  = "v2.1.0"
+	GORELEASER_VERSION  = "v2.4.8"
 	GROUND_CONTROL_PATH = "./ground-control"
 	SATELLITE_PATH      = "."
 )
@@ -158,6 +158,7 @@ func (m *HarborSatellite) Release(ctx context.Context,
 		slog.Error("Failed to get github token: ", err, ".")
 		os.Exit(1)
 	}
+	fmt.Println("Token: ", token)
 	container := dag.Container().
 		From("alpine/git").
 		WithEnvVariable("GITHUB_TOKEN", token).
