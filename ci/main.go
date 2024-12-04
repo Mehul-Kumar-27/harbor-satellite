@@ -16,12 +16,27 @@ const (
 	GO_VERSION          = "1.22"
 	PROJ_MOUNT          = "/app"
 	DOCKER_PORT         = 2375
-	GORELEASER_VERSION  = "v2.4.8"
+	GORELEASER_VERSION  = "v2.3.2"
 	GROUND_CONTROL_PATH = "./ground-control"
 	SATELLITE_PATH      = "."
+	SYFT_VERSION        = "v1.9.0"
 )
 
-type HarborSatellite struct{}
+func New(
+	// Local or remote directory with source code, defaults to "./"
+	// +optional
+	// +defaultPath="./"
+	source *dagger.Directory,
+) *HarborSatellite {
+	return &HarborSatellite{
+		Source: source,
+	}
+}
+
+type HarborSatellite struct {
+	// Source code directory
+	Source *dagger.Directory
+}
 
 // start the dev server for ground-control.
 func (m *HarborSatellite) RunGroundControl(
@@ -205,4 +220,24 @@ func parsePlatform(platform string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid platform format: %s. Should be os/arch. E.g. darwin/amd64", platform)
 	}
 	return parts[0], parts[1], nil
+}
+
+// Return a container with the goreleaser binary mounted and the source directory mounted.
+func (m *HarborSatellite) goreleaserContainer() *dagger.Container {
+	// Export the syft binary from the syft container as a file to generate SBOM
+	syft := dag.Container().
+		From(fmt.Sprintf("anchore/syft:%s", SYFT_VERSION)).
+		WithMountedCache("/go/pkg/mod", dag.CacheVolume("syft-gomod")).
+		File("/syft")
+
+	return dag.Container().
+		From(fmt.Sprintf("goreleaser/goreleaser:%s", GORELEASER_VERSION)).
+		WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod-"+GO_VERSION)).
+		WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
+		WithMountedCache("/go/build-cache", dag.CacheVolume("go-build-"+GO_VERSION)).
+		WithEnvVariable("GOCACHE", "/go/build-cache").
+		WithFile("/bin/syft", syft).
+		WithMountedDirectory("/src", m.Source).
+		WithWorkdir("/src").
+		WithEnvVariable("TINI_SUBREAPER", "true")
 }

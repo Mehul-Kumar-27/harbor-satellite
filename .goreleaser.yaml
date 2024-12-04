@@ -50,8 +50,37 @@ builds:
         goarch: riscv64
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+sboms:
+  - artifacts: archive
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
 release:
-  name_template: "{{ .Tag }}"
+  name_template: "{{.Tag}}"
+  draft: true                 # Set to false to ensure that releases are published, not kept as drafts
+  prerelease: auto            # Auto-detect prereleases based on tag
+  replace_existing_draft: true
+  replace_existing_artifacts: true
+  disable: false              # Ensure release publishing is enabled
+  github:
+    owner: Mehul-Kumar-27           # Your GitHub repository owner
+    name: harbor-satellite          # Your GitHub repository name
+
+nfpms:
+  -
+    homepage: https://github.com/Mehul-Kumar/harbor-satellite/
+    maintainer: Harbor Community
+    description: |-
+      Harbor Satellite, container registry at the edge.
+    formats:
+      - rpm
+      - deb
+      - apk
+      - archlinux
 
 archives:
   - format: tar.gz
@@ -69,8 +98,30 @@ archives:
         format: zip
 
 changelog:
-  sort: asc
+  use: github
   filters:
     exclude:
       - "^docs:"
       - "^test:"
+      - "merge conflict"
+  groups:
+    - title: "Dependency updates"
+      regexp: '^.*?(.+)\(deps\)!?:.+$'
+      order: 300
+    - title: "New Features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: "Security updates"
+      regexp: '^.*?sec(\(.+\))??!?:.+$'
+      order: 150
+    - title: "Bug fixes"
+      regexp: '^.*?(fix|refactor)(\(.+\))??!?:.+$'
+      order: 200
+    - title: "Documentation updates"
+      regexp: ^.*?docs?(\(.+\))??!?:.+$
+      order: 400
+    - title: "Build process updates"
+      regexp: ^.*?(build|ci)(\(.+\))??!?:.+$
+      order: 400
+    - title: "Other work"
+      order: 9999
