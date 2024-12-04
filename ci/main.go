@@ -221,23 +221,3 @@ func parsePlatform(platform string) (string, string, error) {
 	}
 	return parts[0], parts[1], nil
 }
-
-// Return a container with the goreleaser binary mounted and the source directory mounted.
-func (m *HarborSatellite) goreleaserContainer() *dagger.Container {
-	// Export the syft binary from the syft container as a file to generate SBOM
-	syft := dag.Container().
-		From(fmt.Sprintf("anchore/syft:%s", SYFT_VERSION)).
-		WithMountedCache("/go/pkg/mod", dag.CacheVolume("syft-gomod")).
-		File("/syft")
-
-	return dag.Container().
-		From(fmt.Sprintf("goreleaser/goreleaser:%s", GORELEASER_VERSION)).
-		WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod-"+GO_VERSION)).
-		WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
-		WithMountedCache("/go/build-cache", dag.CacheVolume("go-build-"+GO_VERSION)).
-		WithEnvVariable("GOCACHE", "/go/build-cache").
-		WithFile("/bin/syft", syft).
-		WithMountedDirectory("/src", m.Source).
-		WithWorkdir("/src").
-		WithEnvVariable("TINI_SUBREAPER", "true")
-}
