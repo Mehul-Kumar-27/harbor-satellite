@@ -1,8 +1,3 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
-
-# The lines below are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/need to use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
 
@@ -18,29 +13,51 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -w -s -X github.com/container-registry/harbor-satellite/internal/version.GitCommit={{.FullCommit}}
+      - -w -s -X github.com/Mehul-Kumar-27/harbor-satellite/internal/version.GitCommit={{.FullCommit}}
     goos:
       - linux
       - darwin
     goarch:
-      - amd64
-      - arm64
+      - "amd64"
+      - "arm64"
+      - "ppc64le"
+      - "s390x"
+      - "386"
+      - "loong64"
+      - "mips64"
+      - "mips64le"
+      - "mips"
+      - "mipsle"
+      - "riscv64"
     ignore:
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
+      - goos: darwin
+        goarch: ppc64le
+      - goos: darwin
+        goarch: s390x
+      - goos: darwin
+        goarch: "386"
+      - goos: darwin
+        goarch: loong64
+      - goos: darwin
+        goarch: mips64
+      - goos: darwin
+        goarch: mips64le
+      - goos: darwin
+        goarch: mips
+      - goos: darwin
+        goarch: mipsle
+      - goos: darwin
+        goarch: riscv64
     mod_timestamp: "{{ .CommitTimestamp }}"
-
 
 release:
   name_template: "{{ .Tag }}"
 
 archives:
   - format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of `uname`.
+    # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
-      {{ .Env.APP_NAME }}_
+      {{ .Env.APP_NAME }}
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
