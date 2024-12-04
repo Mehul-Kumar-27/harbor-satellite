@@ -176,7 +176,7 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	fmt.Println("Token: ", token)
 	container := dag.Container().
 		From("alpine/git").
-		WithEnvVariable("GITHUB_TOKEN", token).
+		WithSecretVariable("GITHUB_TOKEN", githubToken).
 		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithExec([]string{"git", "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:"}).
