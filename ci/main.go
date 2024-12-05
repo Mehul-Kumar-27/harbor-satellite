@@ -15,7 +15,7 @@ const (
 	DEFAULT_GO          = "golang:1.22"
 	PROJ_MOUNT          = "/app"
 	DOCKER_PORT         = 2375
-	GORELEASER_VERSION  = "v2.1.0"
+	GORELEASER_VERSION  = "v2.4.8"
 	GROUND_CONTROL_PATH = "./ground-control"
 	SATELLITE_PATH      = "."
 )
@@ -137,7 +137,7 @@ func (m *HarborSatellite) Build(
 	return nil, fmt.Errorf("error: please provide component as either satellite or ground-control")
 }
 
-// Release function would release the build to the github with the tags provided. 
+// Release function would release the build to the github with the tags provided.
 func (m *HarborSatellite) Release(ctx context.Context,
 	// +optional
 	// +defaultPath="./"
