@@ -14,13 +14,29 @@ import (
 const (
 	DEFAULT_GO          = "golang:1.22"
 	PROJ_MOUNT          = "/app"
+	GO_VERSION          = "1.22"
 	DOCKER_PORT         = 2375
 	GORELEASER_VERSION  = "v2.4.8"
 	GROUND_CONTROL_PATH = "./ground-control"
 	SATELLITE_PATH      = "."
 )
 
-type HarborSatellite struct{}
+func New(
+	// Local or remote directory with source code, defaults to "./"
+	// +optional
+	// +defaultPath="./"
+	Source *dagger.Directory,
+) *HarborSatellite {
+	return &HarborSatellite{
+		Source: Source,
+	}
+}
+
+type HarborSatellite struct {
+	// Local or remote directory with source code, defaults to "./"
+	// +defaultPath="./"
+	Source *dagger.Directory
+}
 
 // start the dev server for ground-control.
 func (m *HarborSatellite) RunGroundControl(
@@ -123,7 +139,7 @@ func (m *HarborSatellite) Db(ctx context.Context) (*dagger.Service, error) {
 		AsService().Start(ctx)
 }
 
-// Build function would start the build process for the name provided. Source should be the path to the main.go file.
+// Build function would start the build process for the name provided.
 func (m *HarborSatellite) Build(
 	ctx context.Context,
 	// +optional
@@ -131,8 +147,12 @@ func (m *HarborSatellite) Build(
 	source *dagger.Directory,
 	component string,
 ) (*dagger.Directory, error) {
+	directory := source
+	if component == "ground-control" {
+		directory = source.Directory(GROUND_CONTROL_PATH)
+	}
 	if component == "satellite" || component == "ground-control" {
-		return m.build(source, component), nil
+		return m.build(directory, component), nil
 	}
 	return nil, fmt.Errorf("error: please provide component as either satellite or ground-control")
 }
@@ -148,12 +168,12 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	// +default="patch"
 	release_type string,
 ) (string, error) {
-	token , err := githubToken.Plaintext(ctx)
+	token, err := githubToken.Plaintext(ctx)
 	if err != nil {
 		slog.Error("Failed to get github token: ", err, ".")
 		os.Exit(1)
 	}
-	// trim any whitespace from the token
+	// trim any whitespace from the token, found a few problems with using the token directly from the secret.
 	token = strings.TrimSpace(token)
 	fmt.Println("Token: ", token)
 	container := dag.Container().
@@ -203,5 +223,3 @@ func parsePlatform(platform string) (string, string, error) {
 	}
 	return parts[0], parts[1], nil
 }
-
-/// some changes to test the tag releaser 
