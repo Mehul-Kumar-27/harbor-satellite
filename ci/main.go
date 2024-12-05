@@ -138,7 +138,11 @@ func (m *HarborSatellite) Build(
 }
 
 // Release function would release the build to the github with the tags provided. Directory should be "." for both the satellite and the ground control.
-func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directory, token, name string,
+func (m *HarborSatellite) Release(ctx context.Context,
+	// +optional
+	// +defaultPath="./"
+	source *dagger.Directory,
+	token, component string,
 	// +optional
 	// +default="patch"
 	release_type string,
@@ -146,30 +150,30 @@ func (m *HarborSatellite) Release(ctx context.Context, directory *dagger.Directo
 	container := dag.Container().
 		From("alpine/git").
 		WithEnvVariable("GITHUB_TOKEN", token).
-		WithMountedDirectory(PROJ_MOUNT, directory).
+		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithExec([]string{"git", "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:"}).
 		WithExec([]string{"git", "fetch", "--tags"})
 	// Prepare the tags for the release
-	release_tag, err := m.get_release_tag(ctx, container, directory, name, release_type)
+	release_tag, err := m.get_release_tag(ctx, container, source, component, release_type)
 	if err != nil {
 		slog.Error("Failed to prepare for release: ", err, ".")
 		slog.Error("Tag Release Output:", release_tag, ".")
 		os.Exit(1)
 	}
 	slog.Info("Tag Release Output:", release_tag, ".")
-	pathToMain, err := m.getPathToReleaser(name)
+	pathToMain, err := m.getPathToReleaser(component)
 	if err != nil {
 		slog.Error("Failed to get path to main: ", err, ".")
 		os.Exit(1)
 	}
 	release_output, err := container.
 		From(fmt.Sprintf("goreleaser/goreleaser:%s", GORELEASER_VERSION)).
-		WithMountedDirectory(PROJ_MOUNT, directory).
+		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithEnvVariable("GITHUB_TOKEN", token).
 		WithEnvVariable("PATH_TO_MAIN", pathToMain).
-		WithEnvVariable("APP_NAME", name).
+		WithEnvVariable("APP_NAME", component).
 		WithExec([]string{"git", "tag", release_tag}).
 		WithExec([]string{"goreleaser", "release", "-f", pathToMain, "--clean"}).
 		Stderr(ctx)
