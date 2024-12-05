@@ -110,6 +110,7 @@ func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *da
 ) (string, error) {
 	/// This would get the last tag that was created. Empty string if no tag was created.
 	getTagsOutput, err := git_container.
+		WithExec([]string{"git", "fetch", "--tags"}).
 		WithExec([]string{
 			"/bin/sh", "-c",
 			fmt.Sprintf(`git tag --list "v*%s" | sort -V | tail -n 1`, name),
@@ -120,7 +121,7 @@ func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *da
 		slog.Error("Get Tags Output:", getTagsOutput, ".")
 		return getTagsOutput, err
 	}
-
+	fmt.Println("Get Tags Output:", getTagsOutput, ".")
 	slog.Info("Get Tags Output:", getTagsOutput, ".")
 	latest_tag := strings.TrimSpace(getTagsOutput)
 	new_tag, err := generateNewTag(latest_tag, name, release_type)
@@ -137,6 +138,7 @@ func generateNewTag(latestTag, suffix, release_type string) (string, error) {
 		// If the latest tag is empty, this is the first release
 		return fmt.Sprintf("v0.0.1-%s", suffix), nil
 	}
+	fmt.Println("Latest tag: ", latestTag)
 	versionWithoutSuffix := strings.TrimSuffix(latestTag, fmt.Sprintf("-%s", suffix))
 	versionWithoutSuffix = strings.TrimPrefix(versionWithoutSuffix, "v")
 	fmt.Println("Version without suffix: ", versionWithoutSuffix)
