@@ -148,9 +148,17 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	// +default="patch"
 	release_type string,
 ) (string, error) {
+	token , err := githubToken.Plaintext(ctx)
+	if err != nil {
+		slog.Error("Failed to get github token: ", err, ".")
+		os.Exit(1)
+	}
+	// trim any whitespace from the token
+	token = strings.TrimSpace(token)
+	fmt.Println("Token: ", token)
 	container := dag.Container().
 		From("alpine/git").
-		WithSecretVariable("GITHUB_TOKEN", githubToken).
+		WithEnvVariable("GITHUB_TOKEN", token).
 		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithExec([]string{"git", "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:"}).
@@ -172,7 +180,7 @@ func (m *HarborSatellite) Release(ctx context.Context,
 		From(fmt.Sprintf("goreleaser/goreleaser:%s", GORELEASER_VERSION)).
 		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
-		WithSecretVariable("GITHUB_TOKEN", githubToken).
+		WithEnvVariable("GITHUB_TOKEN", token).
 		WithEnvVariable("PATH_TO_MAIN", pathToMain).
 		WithEnvVariable("APP_NAME", component).
 		WithExec([]string{"git", "tag", release_tag}).
