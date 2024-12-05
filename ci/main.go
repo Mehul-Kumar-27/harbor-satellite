@@ -137,7 +137,7 @@ func (m *HarborSatellite) Build(
 	return nil, fmt.Errorf("error: please provide component as either satellite or ground-control")
 }
 
-// Release function would release the build to the github with the tags provided. Directory should be "." for both the satellite and the ground control.
+// Release function would release the build to the github with the tags provided. 
 func (m *HarborSatellite) Release(ctx context.Context,
 	// +optional
 	// +defaultPath="./"
