@@ -176,7 +176,7 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	fmt.Println("Token: ", token)
 	container := dag.Container().
 		From("alpine/git").
-		WithSecretVariable("GITHUB_TOKEN", githubToken).
+		WithEnvVariable("GITHUB_TOKEN", token).
 		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithExec([]string{"git", "config", "--global", "url.https://github.com/.insteadOf", "git@github.com:"}).
@@ -194,13 +194,14 @@ func (m *HarborSatellite) Release(ctx context.Context,
 		slog.Error("Failed to get path to main: ", err, ".")
 		os.Exit(1)
 	}
+	fmt.Println("Path to main: ", pathToMain)
 	release_output, err := container.
 		From(fmt.Sprintf("goreleaser/goreleaser:%s", GORELEASER_VERSION)).
 		WithMountedDirectory(PROJ_MOUNT, source).
 		WithWorkdir(PROJ_MOUNT).
 		WithEnvVariable("PATH_TO_MAIN", pathToMain).
 		WithEnvVariable("APP_NAME", component).
-		WithExec([]string{"echo", "$GITHUB_TOKEN"}).
+		WithExec([]string{"sh", "-c", "echo $GITHUB_TOKEN"}).
 		WithExec([]string{"git", "tag", release_tag}).
 		WithExec([]string{"goreleaser", "release", "-f", pathToMain, "--clean"}).
 		Stderr(ctx)
