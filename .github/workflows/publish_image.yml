@@ -20,11 +20,14 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Publish Image for Ground Control
         uses: dagger/dagger-for-github@v7
         with:
           verb: call
-          args: "publish-image \
+          args: "publish-image-and-sign \
             --registry='${{ env.REGISTRY }}' \
             --registry-username='${{ env.REGISTRY_USERNAME }}' \
             --registry-password=env:REGISTRY_PASSWORD \
@@ -37,7 +40,7 @@ jobs:
         uses: dagger/dagger-for-github@v7
         with:
           verb: call
-          args: "publish-image \
+          args: "publish-image-and-sign \
             --registry='${{ env.REGISTRY }}' \
             --registry-username='${{ env.REGISTRY_USERNAME }}' \
             --registry-password=env:REGISTRY_PASSWORD \

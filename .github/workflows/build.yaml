@@ -92,7 +92,6 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
           args: build --component=ground-control
 
       - name: Release on Github
@@ -100,7 +99,6 @@ jobs:
         with:
           version: latest
           verb: call
-          module: github.com/container-registry/harbor-satellite
           args: release --component=ground-control --github-token=env:GITHUB_TOKEN
 
         env:
