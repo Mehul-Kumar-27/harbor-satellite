@@ -6,9 +6,6 @@ on:
     types:
       - completed
   workflow_dispatch:
-  push:
-    branches:
-      - release-testing
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

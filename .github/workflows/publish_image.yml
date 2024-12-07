@@ -2,8 +2,15 @@ name: Publish Image
 
 on:
   workflow_dispatch:
-  push:
-    branches: [release-testing]
+    inputs:
+      use-registry-password:
+        description: 'Use registry password to sign the image'
+        default: true
+        type: boolean
+      actions-id-token-request-url:
+        description: 'Actions ID token request URL'
+        default: ''
+        type: string
 
 env:
   # Non-secret environment variables
@@ -15,6 +22,7 @@ env:
   REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
   ACTIONS_ID_TOKEN_REQUEST_URL: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_URL }}
+  USE_REGISTRY_PASSWORD: ${{ github.event.inputs.use-registry-password }}
 
 jobs:
   publish:
@@ -34,7 +42,8 @@ jobs:
             --github-token=env:GITHUB_TOKEN \
             --component='${{ env.GROUND_CONTROL }}' \
             --actions-id-token-request-url='${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}' \
-            --actions-id-token-request-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+            --actions-id-token-request-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            --use-registry-password=${{ env.USE_REGISTRY_PASSWORD }}"
 
       - name: Publish Image for Satellite
         uses: dagger/dagger-for-github@v7
@@ -47,4 +56,5 @@ jobs:
             --github-token=env:GITHUB_TOKEN \
             --component='${{ env.SATELLITE }}' \
             --actions-id-token-request-url='${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}' \
-            --actions-id-token-request-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+            --actions-id-token-request-token=env:ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            --use-registry-password=${{ env.USE_REGISTRY_PASSWORD }}"
