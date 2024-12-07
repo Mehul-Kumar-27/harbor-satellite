@@ -207,34 +207,3 @@ func (m *HarborSatellite) getBuildContainer(
 	return builds
 }
 
-// Sign signs a container image using Cosign
-func (m *HarborSatellite) SignTry(ctx context.Context,
-	registryUsername string,
-	registryPassword *dagger.Secret,
-	cosignPrivateKey *dagger.Secret,
-	cosignPassword *dagger.Secret,
-	imageAddr string,
-) (string, error) {
-	url := "registry.bupd.xyz/harbor-satellite/satellite:latest@sha256:f1bb8f49034daff2f09d401af858d6b8828bca3f4da1f8849524398591dbc258"
-	registryPasswordPlain, _ := registryPassword.Plaintext(ctx)
-	cosing_ctr := dag.Container().From("cgr.dev/chainguard/cosign")
-
-	cosing_ctr = cosing_ctr.
-		WithSecretVariable("COSIGN_PRIVATE_KEY", cosignPrivateKey).
-		WithSecretVariable("COSIGN_PASSWORD", cosignPassword).
-		WithSecretVariable("REGISTRY_PASSWORD", registryPassword).
-		WithExec([]string{"cosign", "env"}).
-		WithExec([]string{"cosign", "sign", "--yes", "--recursive",
-			"--registry-username", registryUsername,
-			"--registry-password", strings.TrimSpace(registryPasswordPlain),
-			url,
-			"--timeout", "1m",
-		})
-
-	output, err := cosing_ctr.Stdout(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to sign image: %w", err)
-	}
-	fmt.Println("Cosign output:", output)
-	return output, nil
-}
