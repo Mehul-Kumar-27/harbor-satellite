@@ -70,7 +70,8 @@ func (m *HarborSatellite) build(source *dagger.Directory, component string) *dag
 	golang := dag.Container().
 		From(DEFAULT_GO).
 		WithDirectory(PROJ_MOUNT, source).
-		WithWorkdir(PROJ_MOUNT)
+		WithWorkdir(PROJ_MOUNT).
+		WithExec([]string{"ls", "-la"})
 
 	// Iterate through supported builds
 	for goos, goarches := range supportedBuilds {
@@ -84,13 +85,7 @@ func (m *HarborSatellite) build(source *dagger.Directory, component string) *dag
 				WithEnvVariable("GOOS", goos).
 				WithEnvVariable("GOARCH", goarch)
 
-			if component == "ground-control" {
-				build = build.WithWorkdir("./ground-control/").
-					WithExec([]string{"go", "build", "-o", outputBinary})
-			} else {
-				build = build.WithExec([]string{"go", "build", "-o", outputBinary})
-			}
-
+			build = build.WithExec([]string{"go", "build", "-o", outputBinary})
 			outputs = outputs.WithDirectory(component, build.Directory(component))
 		}
 	}

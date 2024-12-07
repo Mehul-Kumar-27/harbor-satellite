@@ -148,14 +148,16 @@ func (m *HarborSatellite) Build(
 	source *dagger.Directory,
 	component string,
 ) (*dagger.Directory, error) {
-	directory := source
-	if component == "ground-control" {
+	var directory *dagger.Directory
+	switch {
+	case component == "satellite":
+		directory = source
+	case component == "ground-control":
 		directory = source.Directory(GROUND_CONTROL_PATH)
+	default:
+		return nil, fmt.Errorf("unknown component: %s", component)
 	}
-	if component == "satellite" || component == "ground-control" {
-		return m.build(directory, component), nil
-	}
-	return nil, fmt.Errorf("error: please provide component as either satellite or ground-control")
+	return m.build(directory, component), nil
 }
 
 // Release function would release the build to the github with the tags provided.
