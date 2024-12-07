@@ -35,7 +35,6 @@ func TestSatellite(t *testing.T) {
 
 	// Build & Run Satellite
 	buildSatellite(t, client, ctx, source, dest)
-	assert.NoError(t, err, "Failed to build and run Satellite")
 }
 
 // Setup Source Registry as a Dagger Service
