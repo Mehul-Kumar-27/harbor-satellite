@@ -173,7 +173,7 @@ func (m *HarborSatellite) Release(ctx context.Context,
 ) (string, error) {
 	token, err := githubToken.Plaintext(ctx)
 	if err != nil {
-		slog.Error("Failed to get github token: ", err, ".")
+		fmt.Println("Failed to get github token: ", err)
 		os.Exit(1)
 	}
 	// trim any whitespace from the token, found a few problems with using the token directly from the secret.
@@ -189,14 +189,14 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	// Prepare the tags for the release
 	release_tag, err := m.get_release_tag(ctx, container, source, component, release_type)
 	if err != nil {
-		slog.Error("Failed to prepare for release: ", err, ".")
-		slog.Error("Tag Release Output:", release_tag, ".")
+		fmt.Println("Failed to get release tag: ", err)
+		fmt.Println("Release Tag Output:", release_tag)
 		os.Exit(1)
 	}
 	slog.Info("Tag Release Output:", release_tag, ".")
 	pathToMain, err := m.getPathToReleaser(component)
 	if err != nil {
-		slog.Error("Failed to get path to main: ", err, ".")
+		fmt.Println("Failed to get path to main: ", err)
 		os.Exit(1)
 	}
 	release_output, err := container.
@@ -210,8 +210,8 @@ func (m *HarborSatellite) Release(ctx context.Context,
 		WithExec([]string{"goreleaser", "release", "-f", pathToMain, "--clean"}).
 		Stderr(ctx)
 	if err != nil {
-		slog.Error("Failed to release: ", err, ".")
-		slog.Error("Release Output:", release_output, ".")
+		fmt.Println("Failed to release: ", err)
+		fmt.Println("Release Output:", release_output)
 		os.Exit(1)
 	}
 

@@ -108,8 +108,8 @@ func (m *HarborSatellite) get_release_tag(ctx context.Context, git_container *da
 		}).
 		Stdout(ctx)
 	if err != nil {
-		slog.Error("Failed to get tags: ", err, ".")
-		slog.Error("Get Tags Output:", getTagsOutput, ".")
+		fmt.Println("Failed to get tags: ", err.Error(), ".")
+		fmt.Println("Get Tags Output: ", getTagsOutput, ".")
 		return getTagsOutput, err
 	}
 	fmt.Println("Get Tags Output:", getTagsOutput, ".")
