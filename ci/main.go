@@ -19,6 +19,7 @@ const (
 	GORELEASER_VERSION  = "v2.4.8"
 	GROUND_CONTROL_PATH = "./ground-control"
 	SATELLITE_PATH      = "."
+	DOCKER_VERSION      = "24.0"
 )
 
 func New(

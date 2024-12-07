@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"container-registry.com/harbor-satellite/ci/internal/dagger"
 )
@@ -21,12 +22,6 @@ func (m *HarborSatellite) PublishImage(
 	// +defaultPath="./"
 	source *dagger.Directory,
 ) []string {
-	password, err := registryPassword.Plaintext(ctx)
-	if err != nil {
-		panic(fmt.Sprintf("failed to get plaintext: %v", err))
-	}
-	password = strings.TrimSpace(password)
-
 	var directory *dagger.Directory
 	switch {
 	case component == "satellite":
@@ -72,24 +67,22 @@ func (m *HarborSatellite) PublishImage(
 		releaseImages = append(releaseImages, ctr)
 	}
 	imageAddrs := []string{}
-	publishErrors := []error{}
+	password, err := registryPassword.Plaintext(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("failed to get password: %v", err))
+	}
+	password = strings.TrimSpace(password)
 	for _, imageTag := range imageTags {
-		addr, err := dag.Container().WithRegistryAuth(registry, registryUsername, registryPassword).
+		addr, err := dag.Container().WithRegistryAuth(registry, registryUsername, dag.SetSecret("password", password)).
 			Publish(ctx,
-				fmt.Sprintf("%s/%s/%s:%s", registry, component, component, imageTag),
+				fmt.Sprintf("%s/%s/%s:%s", registry, "harbor-satellite", component, imageTag),
 				dagger.ContainerPublishOpts{PlatformVariants: releaseImages},
 			)
 		if err != nil {
-			publishErrors = append(publishErrors, err)
-			continue
+			panic(fmt.Sprintf("failed to publish image: %v", err))
 		}
+		fmt.Println("Published image:", addr)
 		imageAddrs = append(imageAddrs, addr)
-	}
-	if len(publishErrors) > 0 {
-		for i := range publishErrors {
-			fmt.Printf("Error publishing image: %v\n", publishErrors[i])
-		}
-		panic("failed to publish image")
 	}
 
 	return imageAddrs
@@ -115,7 +108,6 @@ func (m *HarborSatellite) PublishImageAndSign(
 	// +defaultPath="."
 	source *dagger.Directory,
 ) (string, error) {
-
 	imageAddrs := m.PublishImage(ctx, registry, registryUsername, imageTags, registryPassword, component, source)
 
 	for i := range imageAddrs {
@@ -131,7 +123,7 @@ func (m *HarborSatellite) PublishImageAndSign(
 		if err != nil {
 			return "", fmt.Errorf("failed to sign image: %w", err)
 		}
-		fmt.Printf("Signed image: %s\n", imageAddrs)
+		fmt.Printf("Signed image: %s\n", imageAddrs[i])
 	}
 
 	return imageAddrs[0], nil
@@ -149,7 +141,11 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 	registryPassword *dagger.Secret,
 	imageAddr string,
 ) (string, error) {
+	// set the context deadline to 5 minutes
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
 	registryPasswordPlain, _ := registryPassword.Plaintext(ctx)
+	registryPasswordPlain = strings.TrimSpace(registryPasswordPlain)
 
 	cosing_ctr := dag.Container().From("cgr.dev/chainguard/cosign")
 
@@ -164,7 +160,7 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 			WithSecretVariable("ACTIONS_ID_TOKEN_REQUEST_TOKEN", actionsIdTokenRequestToken)
 	}
 
-	return cosing_ctr.WithSecretVariable("REGISTRY_PASSWORD", registryPassword).
+	return cosing_ctr.WithEnvVariable("REGISTRY_PASSWORD", registryPasswordPlain).
 		WithExec([]string{"cosign", "env"}).
 		WithExec([]string{"cosign", "sign", "--yes", "--recursive",
 			"--registry-username", registryUsername,
@@ -209,4 +205,36 @@ func (m *HarborSatellite) getBuildContainer(
 		}
 	}
 	return builds
+}
+
+// Sign signs a container image using Cosign
+func (m *HarborSatellite) SignTry(ctx context.Context,
+	registryUsername string,
+	registryPassword *dagger.Secret,
+	cosignPrivateKey *dagger.Secret,
+	cosignPassword *dagger.Secret,
+	imageAddr string,
+) (string, error) {
+	url := "registry.bupd.xyz/harbor-satellite/satellite:latest@sha256:f1bb8f49034daff2f09d401af858d6b8828bca3f4da1f8849524398591dbc258"
+	registryPasswordPlain, _ := registryPassword.Plaintext(ctx)
+	cosing_ctr := dag.Container().From("cgr.dev/chainguard/cosign")
+
+	cosing_ctr = cosing_ctr.
+		WithSecretVariable("COSIGN_PRIVATE_KEY", cosignPrivateKey).
+		WithSecretVariable("COSIGN_PASSWORD", cosignPassword).
+		WithSecretVariable("REGISTRY_PASSWORD", registryPassword).
+		WithExec([]string{"cosign", "env"}).
+		WithExec([]string{"cosign", "sign", "--yes", "--recursive",
+			"--registry-username", registryUsername,
+			"--registry-password", strings.TrimSpace(registryPasswordPlain),
+			url,
+			"--timeout", "1m",
+		})
+
+	output, err := cosing_ctr.Stdout(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign image: %w", err)
+	}
+	fmt.Println("Cosign output:", output)
+	return output, nil
 }
