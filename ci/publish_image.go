@@ -141,11 +141,18 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 	registryPassword *dagger.Secret,
 	imageAddr string,
 ) (string, error) {
-	// set the context deadline to 5 minutes
+	// set the context deadline to 5 minutes to avoid the error of "context deadline exceeded" when signing the image
+	// setting it to 5 minutes because the signing process may take a while also the token is valid for 5 minutes
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	registryPasswordPlain, _ := registryPassword.Plaintext(ctx)
 	registryPasswordPlain = strings.TrimSpace(registryPasswordPlain)
+
+	githubTokenPlain, _ := githubToken.Plaintext(ctx)
+	githubTokenPlain = strings.TrimSpace(githubTokenPlain)
+
+	actionsIdTokenRequestTokenPlain, _ := actionsIdTokenRequestToken.Plaintext(ctx)
+	actionsIdTokenRequestTokenPlain = strings.TrimSpace(actionsIdTokenRequestTokenPlain)
 
 	cosing_ctr := dag.Container().From("cgr.dev/chainguard/cosign")
 
@@ -155,9 +162,9 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 			return "", fmt.Errorf("actionsIdTokenRequestUrl (exist=%s) and actionsIdTokenRequestToken (exist=%t) must be provided when githubToken is provided", actionsIdTokenRequestUrl, actionsIdTokenRequestToken != nil)
 		}
 		fmt.Printf("Setting the ENV Vars GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL, ACTIONS_ID_TOKEN_REQUEST_TOKEN to sign with GitHub Token")
-		cosing_ctr = cosing_ctr.WithSecretVariable("GITHUB_TOKEN", githubToken).
+		cosing_ctr = cosing_ctr.WithEnvVariable("GITHUB_TOKEN", githubTokenPlain).
 			WithEnvVariable("ACTIONS_ID_TOKEN_REQUEST_URL", actionsIdTokenRequestUrl).
-			WithSecretVariable("ACTIONS_ID_TOKEN_REQUEST_TOKEN", actionsIdTokenRequestToken)
+			WithEnvVariable("ACTIONS_ID_TOKEN_REQUEST_TOKEN", actionsIdTokenRequestTokenPlain)
 	}
 
 	return cosing_ctr.WithEnvVariable("REGISTRY_PASSWORD", registryPasswordPlain).
@@ -206,4 +213,3 @@ func (m *HarborSatellite) getBuildContainer(
 	}
 	return builds
 }
-
