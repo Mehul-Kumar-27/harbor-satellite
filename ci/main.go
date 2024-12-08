@@ -178,7 +178,6 @@ func (m *HarborSatellite) Release(ctx context.Context,
 	}
 	// trim any whitespace from the token, found a few problems with using the token directly from the secret.
 	token = strings.TrimSpace(token)
-	fmt.Println("Token: ", token)
 	container := dag.Container().
 		From("alpine/git").
 		WithEnvVariable("GITHUB_TOKEN", token).

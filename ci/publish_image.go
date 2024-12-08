@@ -152,15 +152,11 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 	// setting it to 5 minutes because the signing process may take a while also the token is valid for 5 minutes
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	registryPasswordPlain, _ := registryPassword.Plaintext(ctx)
+	registryPasswordPlain, err := registryPassword.Plaintext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get password: %w", err)
+	}
 	registryPasswordPlain = strings.TrimSpace(registryPasswordPlain)
-
-	githubTokenPlain, _ := githubToken.Plaintext(ctx)
-	githubTokenPlain = strings.TrimSpace(githubTokenPlain)
-
-	actionsIdTokenRequestTokenPlain, _ := actionsIdTokenRequestToken.Plaintext(ctx)
-	actionsIdTokenRequestTokenPlain = strings.TrimSpace(actionsIdTokenRequestTokenPlain)
-
 	cosing_ctr := dag.Container().From("cgr.dev/chainguard/cosign")
 
 	if !useRegistryPassword {
@@ -169,6 +165,17 @@ func (m *HarborSatellite) Sign(ctx context.Context,
 			if actionsIdTokenRequestUrl == "" || actionsIdTokenRequestToken == nil {
 				return "", fmt.Errorf("actionsIdTokenRequestUrl (exist=%s) and actionsIdTokenRequestToken (exist=%t) must be provided when githubToken is provided", actionsIdTokenRequestUrl, actionsIdTokenRequestToken != nil)
 			}
+			githubTokenPlain, err := githubToken.Plaintext(ctx)
+			if err != nil {
+				return "", fmt.Errorf("failed to get github token: %w", err)
+			}
+			githubTokenPlain = strings.TrimSpace(githubTokenPlain)
+
+			actionsIdTokenRequestTokenPlain, err := actionsIdTokenRequestToken.Plaintext(ctx)
+			if err != nil {
+				return "", fmt.Errorf("failed to get actionsIdTokenRequestToken: %w", err)
+			}
+			actionsIdTokenRequestTokenPlain = strings.TrimSpace(actionsIdTokenRequestTokenPlain)
 			fmt.Printf("Setting the ENV Vars GITHUB_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL, ACTIONS_ID_TOKEN_REQUEST_TOKEN to sign with GitHub Token")
 			cosing_ctr = cosing_ctr.WithEnvVariable("GITHUB_TOKEN", githubTokenPlain).
 				WithEnvVariable("ACTIONS_ID_TOKEN_REQUEST_URL", actionsIdTokenRequestUrl).
